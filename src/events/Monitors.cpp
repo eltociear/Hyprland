@@ -5,6 +5,7 @@
 #include "Events.hpp"
 #include "../debug/HyprCtl.hpp"
 #include "../managers/FrameSchedulingManager.hpp"
+#include "../config/ConfigValue.hpp"
 
 // --------------------------------------------------------- //
 //   __  __  ____  _   _ _____ _______ ____  _____   _____   //
@@ -121,12 +122,12 @@ void Events::listener_monitorFrame(void* owner, void* data) {
 
     return; // TODO: remove completely
 
-    static auto* const PENABLERAT = (Hyprlang::INT* const*)g_pConfigManager->getConfigValuePtr("misc:render_ahead_of_time");
-    static auto* const PRATSAFE   = (Hyprlang::INT* const*)g_pConfigManager->getConfigValuePtr("misc:render_ahead_safezone");
+    static auto PENABLERAT = CConfigValue<Hyprlang::INT>("misc:render_ahead_of_time");
+    static auto PRATSAFE   = CConfigValue<Hyprlang::INT>("misc:render_ahead_safezone");
 
     PMONITOR->lastPresentationTimer.reset();
 
-    if (**PENABLERAT && !PMONITOR->tearingState.nextRenderTorn) {
+    if (*PENABLERAT && !PMONITOR->tearingState.nextRenderTorn) {
         if (!PMONITOR->RATScheduled) {
             // render
             g_pHyprRenderer->renderMonitor(PMONITOR);
@@ -136,14 +137,14 @@ void Events::listener_monitorFrame(void* owner, void* data) {
 
         const auto& [avg, max, min] = g_pHyprRenderer->getRenderTimes(PMONITOR);
 
-        if (max + **PRATSAFE > 1000.0 / PMONITOR->refreshRate)
+        if (max + *PRATSAFE > 1000.0 / PMONITOR->refreshRate)
             return;
 
         const auto MSLEFT = 1000.0 / PMONITOR->refreshRate - PMONITOR->lastPresentationTimer.getMillis();
 
         PMONITOR->RATScheduled = true;
 
-        const auto ESTRENDERTIME = std::ceil(avg + **PRATSAFE);
+        const auto ESTRENDERTIME = std::ceil(avg + *PRATSAFE);
         const auto TIMETOSLEEP   = std::floor(MSLEFT - ESTRENDERTIME);
 
         if (MSLEFT < 1 || MSLEFT < ESTRENDERTIME || TIMETOSLEEP < 1)
